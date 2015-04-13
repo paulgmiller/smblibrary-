@@ -1,0 +1,122 @@
+# Source Depot Client Artifact
+sd.ini
+sdb.ini
+
+# Visual Studio Garbage
+*.sln
+*.user
+*.pch
+*.vspscc
+*_i.c
+*_p.c
+*.ncb
+*.suo
+*.sln.ide/
+*.tlb
+*.tlh
+*.bak
+*.cache
+*.ilk
+*.lib
+*.sbr
+*.pidb
+*.userprefs
+*.swp
+*.sdf
+*.opensdf
+*.psess
+*.vspx
+
+# vsmsbuild would generate dirs.sln, projhash* and slnhash*
+*.projhash*
+*.slnhash*
+dirs.sdf
+
+# build output directories
+[Oo]bjd/
+[Oo]bj/
+target/
+[Bb]in/
+build_logs/
+OACRTemp/
+FilesFromCache/
+__tracer/
+VersionGeneratingLogs/
+
+# build logs
+build*.log
+build*.err
+build*.wrn
+build*.dbb
+build*.prf
+build*.evt
+build*.trc
+build*.trc.txt
+build*.rec
+
+#QuickBuild
+QLocal/
+QLogs/
+QSandbox/
+QTestLogs/
+__cbcOutput/
+__cacheOutput/
+QuickBuild.log
+BuildSessionInfo.json
+binplace.log
+
+# corext v4 stuff
+.corext/gen/
+build/environment/
+tools/path1st/sd.cmd
+public/lock
+data/versions.xml
+tmp/cache
+
+# corext versioning generated on build
+public/inc/bldver.*
+!public/inc/bldver.rc
+!public/inc/bldver.hf
+public/inc/sources.ver
+version/versions.xml
+
+# except packages.ini and branch specific settings
+private/packages/*
+!private/packages/PacmanBranchSpecificSettings.txt
+!private/packages/packages.ini
+
+# ignore thumbnails created by windows
+Thumbs.db
+
+# Testing Artificats
+[Tt]est[Rr]esult*
+pingme.txt
+
+# CloudStore cache
+private/CloudBuild/Cache/Nuget/*.nupkg
+private/CloudBuild/Cache/Nuget/*.log
+private/CloudBuild/Cache/Nuget/root
+
+# Exemptions
+![Tt]est[Rr]esult*.cs
+!TestResultStore/
+!TestResultStats/
+!private/Misc/SDObjectModel/src/sdapi/Bin
+!Enterprise.bak
+!Preference.bak
+!private/services/pipeline/workflow.tests/Notification/*.log
+!private/DevTools/dbs/BuilderManager/bin/
+!private/Services/Pipeline/Build.Tests/TestData/*
+!*.bond
+
+# VIM backup files
+*~
+
+# Git artifacts
+*.orig
+
+# NCrunch temp directory
+_NCrunch*/
+
+# We will generate this on demand
+*.v2.ncrunchsolution
