@@ -13,12 +13,11 @@ namespace SMBServer
         [STAThread]
         static void Main()
         {
-            Application.ThreadException += new ThreadExceptionEventHandler(Application_ThreadException);
-            AppDomain.CurrentDomain.UnhandledException += new UnhandledExceptionEventHandler(CurrentDomain_UnhandledException);
+            Console.WriteLine("starting");
+            var server = new Server();
+            Console.WriteLine("started");
+            while (true) { };
 
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new ServerUI());
         }
 
         public static void Application_ThreadException(object sender, ThreadExceptionEventArgs e)

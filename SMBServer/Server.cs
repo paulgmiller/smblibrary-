@@ -25,7 +25,8 @@ namespace SMBServer
         public Server()
         {
 
-            IPAddress serverAddress = Dns.GetHostAddresses(Dns.GetHostName()).First();
+            IPAddress serverAddress = IPAddress.Any;
+            //Dns.GetHostAddresses(Dns.GetHostName())
             SMBTransportType transportType = SMBTransportType.DirectTCPTransport;
             
 
