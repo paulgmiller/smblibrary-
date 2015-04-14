@@ -119,49 +119,8 @@ namespace SMBLibrary.Server
         {
             SessionSetupAndXResponseExtended response = new SessionSetupAndXResponseExtended();
 
-            bool isValid = AuthenticationMessageUtils.IsSignatureValid(request.SecurityBlob);
-            if (!isValid)
-            {
-                header.Status = NTStatus.STATUS_NOT_IMPLEMENTED;
-                return new ErrorResponse(CommandName.SMB_COM_SESSION_SETUP_ANDX);
-            }
-
-            MessageTypeName messageType = AuthenticationMessageUtils.GetMessageType(request.SecurityBlob);
-            if (messageType == MessageTypeName.Negotiate)
-            {
-                byte[] challengeMessageBytes = users.GetChallengeMessageBytes(request.SecurityBlob);
-                response.SecurityBlob = challengeMessageBytes;
-                header.Status = NTStatus.STATUS_MORE_PROCESSING_REQUIRED;
-            }
-            else // MessageTypeName.Authenticate
-            {
-                User user;
-                try
-                {
-                    user = users.Authenticate(request.SecurityBlob);
-                }
-                catch(EmptyPasswordNotAllowedException)
-                {
-                    header.Status = NTStatus.STATUS_ACCOUNT_RESTRICTION;
-                    return new ErrorResponse(CommandName.SMB_COM_SESSION_SETUP_ANDX);
-                }
-
-
-                if (user != null)
-                {
-                    header.UID = state.AddConnectedUser(user.AccountName);
-                }
-                else if (users.EnableGuestLogin)
-                {
-                    response.Action = SessionSetupAction.SetupGuest;
-                    header.UID = state.AddConnectedUser("Guest");
-                }
-                else
-                {
-                    header.Status = NTStatus.STATUS_LOGON_FAILURE;
-                    return new ErrorResponse(CommandName.SMB_COM_SESSION_SETUP_ANDX);
-                }
-            }
+            response.Action = SessionSetupAction.SetupGuest;
+            header.UID = state.AddConnectedUser("Guest");
             response.NativeOS = String.Empty; // "Windows Server 2003 3790 Service Pack 2"
             response.NativeLanMan = String.Empty; // "Windows Server 2003 5.2"
 

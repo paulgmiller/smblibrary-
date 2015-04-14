@@ -105,6 +105,7 @@ namespace SMBLibrary.Server
             state.ClientSocket = clientSocket;
             try
             {
+                Log("[{0}] Begin Recieve", DateTime.Now.ToString("HH:mm:ss:ffff"));
                 clientSocket.BeginReceive(state.ReceiveBuffer, 0, StateObject.ReceiveBufferSize, 0, ReceiveCallback, state);
             }
             catch (ObjectDisposedException)
@@ -113,6 +114,7 @@ namespace SMBLibrary.Server
             catch (SocketException)
             {
             }
+            Log("[{0}] Begin accpept", DateTime.Now.ToString("HH:mm:ss:ffff"));
             m_listenerSocket.BeginAccept(ConnectRequestCallback, m_listenerSocket);
         }
 

@@ -1,8 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings>
   <Shares>
-    <Share Name="drops" account="dropstorageprod" key="blah">
-      <ReadAccess Accounts="*"></ReadAccess>
+    <Share Name="drops" Path="D:\scratch\drops">
+      <ReadAccess Accounts="Guest"></ReadAccess>
     </Share>
   </Shares>
   <Users >
