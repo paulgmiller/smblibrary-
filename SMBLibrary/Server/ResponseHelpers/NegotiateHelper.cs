@@ -1,4 +1,4 @@
-/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
+﻿/* Copyright (C) 2014 Tal Aloni <tal.aloni.il@gmail.com>. All rights reserved.
  * 
  * You can redistribute this program and/or modify it under the terms of
  * the GNU Lesser Public License as published by the Free Software Foundation,
@@ -118,6 +118,8 @@ namespace SMBLibrary.Server
         internal static SMBCommand GetSessionSetupResponseExtended(SMBHeader header, SessionSetupAndXRequestExtended request, INTLMAuthenticationProvider users, StateObject state)
         {
             SessionSetupAndXResponseExtended response = new SessionSetupAndXResponseExtended();
+
+            //see commit dd68473e2086bad4c57d39bb33d7c1a87d037144. Bunch of authentication stuff was removed
 
             response.Action = SessionSetupAction.SetupGuest;
             header.UID = state.AddConnectedUser("Guest");
