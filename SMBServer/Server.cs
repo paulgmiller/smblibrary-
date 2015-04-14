@@ -31,16 +31,17 @@ namespace SMBServer
             
 
             INTLMAuthenticationProvider provider = new Win32UserCollection();
+            //should probably do our own implementation of this that lets everyone through. 
+            //Till then we've hacked it so everyone is a guest.
 
-            List<string> allUsers = provider.ListUsers();
             ShareCollection shares;
             try
             {
-                shares = ReadShareSettings(allUsers);
+                shares = ReadShareSettings();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageBox.Show("Cannot read " + SettingsFileName, "Error");
+                Console.WriteLine("Cannot read {0}: {1}", SettingsFileName, ex.Message);
                 return;
             }
 
@@ -49,7 +50,7 @@ namespace SMBServer
             
         }
 
-        private ShareCollection ReadShareSettings(List<string> allUsers)
+        private ShareCollection ReadShareSettings()
         {
             ShareCollection shares = new ShareCollection();
             string executableDirectory = Path.GetDirectoryName(Application.ExecutablePath) + "\\";

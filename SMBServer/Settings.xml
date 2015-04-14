@@ -1,12 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings>
   <Shares>
-    <Share Name="drops" Path="D:\scratch\drops">
-      <ReadAccess Accounts="Guest"></ReadAccess>
-    </Share>
+    <Share Name="drops" Path="D:\scratch\drops" />
   </Shares>
-  <Users >
-    <User AccountName="Admin" Password="admin"></User>
-    <User AccountName="Test" Password="test"></User>
-  </Users>
 </Settings>
