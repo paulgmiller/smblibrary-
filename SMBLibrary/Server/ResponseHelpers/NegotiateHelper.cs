@@ -68,39 +68,16 @@ namespace SMBLibrary.Server
             return response;
         }
 
-        internal static SMBCommand GetSessionSetupResponse(SMBHeader header, SessionSetupAndXRequest request, INTLMAuthenticationProvider users, StateObject state)
+        internal static SMBCommand GetSessionSetupResponse(SMBHeader header, SessionSetupAndXRequest request, StateObject state)
         {
             SessionSetupAndXResponse response = new SessionSetupAndXResponse();
             // The PrimaryDomain field in the request is used to determine with domain controller should authenticate the user credentials,
             // However, the domain controller itself does not use this field.
             // See: http://msdn.microsoft.com/en-us/library/windows/desktop/aa378749%28v=vs.85%29.aspx
-            User user;
-            try
-            {
-                user = users.Authenticate(request.AccountName, request.OEMPassword, request.UnicodePassword);
-            }
-            catch(EmptyPasswordNotAllowedException)
-            {
-                header.Status = NTStatus.STATUS_ACCOUNT_RESTRICTION;
-                return new ErrorResponse(CommandName.SMB_COM_SESSION_SETUP_ANDX);
-            }
-
-            if (user != null)
-            {
-                response.PrimaryDomain = request.PrimaryDomain;
-                header.UID = state.AddConnectedUser(user.AccountName);
-            }
-            else if (users.EnableGuestLogin)
-            {
-                response.Action = SessionSetupAction.SetupGuest;
-                response.PrimaryDomain = request.PrimaryDomain;
-                header.UID = state.AddConnectedUser("Guest");
-            }
-            else
-            {
-                header.Status = NTStatus.STATUS_LOGON_FAILURE;
-                return new ErrorResponse(CommandName.SMB_COM_SESSION_SETUP_ANDX);
-            }
+            response.Action = SessionSetupAction.SetupGuest;
+            response.PrimaryDomain = request.PrimaryDomain;
+            header.UID = state.AddConnectedUser("Guest");
+            
             if ((request.Capabilities & ServerCapabilities.LargeRead) > 0)
             {
                 state.LargeRead = true;
@@ -115,7 +92,7 @@ namespace SMBLibrary.Server
             return response;
         }
 
-        internal static SMBCommand GetSessionSetupResponseExtended(SMBHeader header, SessionSetupAndXRequestExtended request, INTLMAuthenticationProvider users, StateObject state)
+        internal static SMBCommand GetSessionSetupResponseExtended(SMBHeader header, SessionSetupAndXRequestExtended request, StateObject state)
         {
             SessionSetupAndXResponseExtended response = new SessionSetupAndXResponseExtended();
 

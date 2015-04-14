@@ -25,7 +25,6 @@ namespace SMBLibrary.Server
         public const bool EnableExtendedSecurity = true;
 
         private ShareCollection m_shares; // e.g. Shared folders
-        private INTLMAuthenticationProvider m_users;
         private NamedPipeShare m_services; // Named pipes
         private IPAddress m_serverAddress;
         private SMBTransportType m_transport;
@@ -34,10 +33,9 @@ namespace SMBLibrary.Server
         private bool m_listening;
         private Guid m_serverGuid;
 
-        public SMBServer(ShareCollection shares, INTLMAuthenticationProvider users, IPAddress serverAddress, SMBTransportType transport)
+        public SMBServer(ShareCollection shares, IPAddress serverAddress, SMBTransportType transport)
         {
             m_shares = shares;
-            m_users = users;
             m_serverAddress = serverAddress;
             m_serverGuid = Guid.NewGuid();
             m_transport = transport;
@@ -347,8 +345,7 @@ namespace SMBLibrary.Server
                     }
                     else
                     {
-                        byte[] serverChallenge = m_users.GenerateServerChallenge();
-                        return NegotiateHelper.GetNegotiateResponse(header, request, serverChallenge);
+                        return new NegotiateResponseNotSupported();
                     }
                 }
                 else
@@ -360,13 +357,14 @@ namespace SMBLibrary.Server
             {
                 SessionSetupAndXRequest request = (SessionSetupAndXRequest)command;
                 state.MaxBufferSize = request.MaxBufferSize;
-                return NegotiateHelper.GetSessionSetupResponse(header, request, m_users, state);
+                //this probably won't work
+                return NegotiateHelper.GetSessionSetupResponse(header, request, state);
             }
             else if (command is SessionSetupAndXRequestExtended)
             {
                 SessionSetupAndXRequestExtended request = (SessionSetupAndXRequestExtended)command;
                 state.MaxBufferSize = request.MaxBufferSize;
-                return NegotiateHelper.GetSessionSetupResponseExtended(header, request, m_users, state);
+                return NegotiateHelper.GetSessionSetupResponseExtended(header, request, state);
             }
             else if (command is EchoRequest)
             {

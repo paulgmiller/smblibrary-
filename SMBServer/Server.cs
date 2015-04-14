@@ -20,8 +20,7 @@ namespace SMBServer
     {
         public const string SettingsFileName = "Settings.xml";
         private SMBLibrary.Server.SMBServer m_server;
-        private SMBLibrary.Server.NameServer m_nameServer;
-
+        
         public Server()
         {
 
@@ -29,11 +28,6 @@ namespace SMBServer
             //Dns.GetHostAddresses(Dns.GetHostName())
             SMBTransportType transportType = SMBTransportType.DirectTCPTransport;
             
-
-            INTLMAuthenticationProvider provider = new Win32UserCollection();
-            //should probably do our own implementation of this that lets everyone through. 
-            //Till then we've hacked it so everyone is a guest.
-
             ShareCollection shares;
             try
             {
@@ -45,7 +39,7 @@ namespace SMBServer
                 return;
             }
 
-            m_server = new SMBLibrary.Server.SMBServer(shares, provider, serverAddress, transportType);
+            m_server = new SMBLibrary.Server.SMBServer(shares, serverAddress, transportType);
             m_server.Start();
             
         }
