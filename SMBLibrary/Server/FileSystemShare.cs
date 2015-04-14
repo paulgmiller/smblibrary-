@@ -8,18 +8,21 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using Utilities;
+using System.Linq;
 
 namespace SMBLibrary.Server
 {
     public class FileSystemShare
     {
         public string Name;
-        public List<string> ReadAccess;
-        public List<string> WriteAccess;
+        public IEnumerable<string> ReadAccess;
+        public IEnumerable<string> WriteAccess;
         public IFileSystem FileSystem;
 
         public bool HasReadAccess(string userName)
         {
+            if (ReadAccess.First().Equals("*")) return true;
+
             return Contains(ReadAccess, userName);
         }
 
@@ -28,21 +31,10 @@ namespace SMBLibrary.Server
             return Contains(WriteAccess, userName);
         }
 
-        public static bool Contains(List<string> list, string value)
+        public static bool Contains(IEnumerable<string> list, string value)
         {
-            return (IndexOf(list, value) >= 0);
+            return list.Any(item => item.Equals(value, StringComparison.InvariantCultureIgnoreCase));
         }
 
-        public static int IndexOf(List<string> list, string value)
-        {
-            for (int index = 0; index < list.Count; index++)
-            {
-                if (string.Equals(list[index], value, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    return index;
-                }
-            }
-            return -1;
-        }
     }
 }

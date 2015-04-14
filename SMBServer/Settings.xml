@@ -1,12 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings>
   <Shares>
-    <Share Name="Shared" Path="C:\Shared">
+    <Share Name="drops" account="dropstorageprod" key="blah">
       <ReadAccess Accounts="*"></ReadAccess>
-      <WriteAccess Accounts="Admin,Test"></WriteAccess>
     </Share>
   </Shares>
-  <Users>
+  <Users >
     <User AccountName="Admin" Password="admin"></User>
     <User AccountName="Test" Password="test"></User>
   </Users>

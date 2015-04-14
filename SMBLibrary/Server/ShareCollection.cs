@@ -13,7 +13,7 @@ namespace SMBLibrary.Server
 {
     public class ShareCollection : List<FileSystemShare>
     {
-        public void Add(string shareName, List<string> readAccess, List<string> writeAccess, IFileSystem fileSystem)
+        public void Add(string shareName, IEnumerable<string> readAccess, IEnumerable<string> writeAccess, IFileSystem fileSystem)
         {
             FileSystemShare share = new FileSystemShare();
             share.Name = shareName;
