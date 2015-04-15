@@ -53,12 +53,30 @@ namespace SMBServer
 
             foreach (XmlNode shareNode in sharesNode.ChildNodes)
             {
-                string shareName = shareNode.Attributes["Name"].Value;
-                string sharePath = shareNode.Attributes["Path"].Value;
+                if (shareNode.Name.Equals("DirectoryShare", StringComparison.OrdinalIgnoreCase))
+                { 
+                    string shareName = shareNode.Attributes["Name"].Value;
+                    string sharePath = shareNode.Attributes["Path"].Value;
 
-                shares.Add(shareName, new string[] {"*"}, new string[] {}, 
-                            new DirectoryFileSystem(sharePath));
+                    shares.Add(shareName, new string[] {"*"}, new string[] {}, 
+                                new DirectoryFileSystem(sharePath));
+                }
+                else if (shareNode.Name.Equals("DropShare", StringComparison.OrdinalIgnoreCase))
+                {
+                     string shareName = shareNode.Attributes["Name"].Value;
+                     string account = shareNode.Attributes["Account"].Value;
+                     string key = shareNode.Attributes["Key"].Value;
+                     shares.Add(shareName, new string[] { "*" }, new string[] { },
+                                 new AzureFileSystem(account, key));
+                }
+                else 
+                {
+                    throw new Exception("invalid config " +  shareNode.Name);
+                }
             }
+
+
+
             return shares;
         }
 
