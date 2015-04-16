@@ -23,7 +23,8 @@ namespace SMBServer
        //worst filesystem ever
       
 
-        public Manifest(string json) {
+        public Manifest(string json, Func<string, ulong> getSize ) : this(getSize) 
+        {
             var _hashDict = JsonConvert.DeserializeObject<Dictionary<string,List<string>>>(json);   
             foreach (var kvp in _hashDict)
             {
@@ -34,9 +35,11 @@ namespace SMBServer
             }
         }
 
-        private Manifest() {}
-        Dictionary<string, Manifest> folders = new Dictionary<string,Manifest>();
-        Dictionary<string, string> files  = new Dictionary<string,string>();
+        private Manifest(Func<string, ulong> getSize) { GetSize = getSize;  }
+
+        Dictionary<string, Manifest> folders = new Dictionary<string, Manifest>(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, string> files = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        Func<string, ulong> GetSize;
         private void Add(IEnumerable<string> path, string hash)
         {
             if (!path.Any()) throw new ArgumentException("no path");
@@ -49,9 +52,9 @@ namespace SMBServer
                 }
                 return;
             } 
-            if (folders.ContainsKey(name))
+            if (!folders.ContainsKey(name))
             {
-                folders.Add(name, new Manifest());
+                folders.Add(name, new Manifest(GetSize));
             }  
             folders[name].Add(path.Skip(1), hash);               
         }
@@ -64,13 +67,14 @@ namespace SMBServer
           string name = path.First();
           if (path.Count() == 1)
           {
-              if (files.ContainsKey(name))
+              string hash;
+              if (files.TryGetValue(name, out hash))
               {
-                  return CreateEntry(fullpath, name, /*isDirectory*/false);
+                  return CreateFile(fullpath, name, hash);
               }
               if (folders.ContainsKey(name))
               {
-                  return CreateEntry(fullpath, name, /*isDirectory*/true);
+                  return CreateDirectory(fullpath, name);
               }
               return null;
           }
@@ -89,9 +93,9 @@ namespace SMBServer
           if (!path.Any()) 
           {
              var folderentries = folders.Keys.Select(folder =>
-                   CreateEntry(Path.Combine(fullpath,folder),folder, true));
-             var fileentries = files.Keys.Select(file => 
-                    CreateEntry(Path.Combine(fullpath,file), file, false));
+                   CreateDirectory(Path.Combine(fullpath,folder),folder));
+             var fileentries = files.Select(file => 
+                    CreateFile(Path.Combine(fullpath,file.Key), file.Key, file.Value));
              return folderentries.Concat(fileentries).ToList();
           }
           string name = path.First();
@@ -100,12 +104,19 @@ namespace SMBServer
           {
               return m.ListEntriesInDirectory(path.Skip(1), fullpath);
           }
-          return null; //empty?
+          return null; 
         }
 
-        private FileSystemEntry CreateEntry(string path, string name, bool isDirectory)
+        private FileSystemEntry CreateDirectory(string path, string name)
         {
-            return new FileSystemEntry(path, name, isDirectory, 0,
+            return new FileSystemEntry(path, name, /*isDirectory*/true, 0,
+                /*Creation*/time, /*LastWriteTime*/time, /*LastAccessTime*/time,
+                /*isHidden*/false, /*isReadonly*/true, /*isArchived*/false);
+        }
+
+        private FileSystemEntry CreateFile(string path, string name, string hash)
+        {
+            return new FileSystemEntry(path, name, false, (ulong)GetSize(hash),
                 /*Creation*/time, /*LastWriteTime*/time, /*LastAccessTime*/time,
                 /*isHidden*/false, /*isReadonly*/true, /*isArchived*/false);
         }
@@ -151,30 +162,57 @@ namespace SMBServer
             _drops = blobClient.GetContainerReference("drops");
         }
 
-        private ConcurrentDictionary<string, Manifest> manifests = new ConcurrentDictionary<string, Manifest>();
+        private ConcurrentDictionary<string, Manifest> manifests = new ConcurrentDictionary<string, Manifest>(StringComparer.OrdinalIgnoreCase);
 
         public Manifest GetManifest(string id)
         {
             id = id.ToLower();
             return manifests.GetOrAdd(id, newid =>
             {
-                var manifestblob = _cache.GetBlockBlobReference(newid + "/files.json");
+                var manifestblob = _drops.GetBlockBlobReference(newid + "/files.json");
                 //var stream = new MemoryStream();
                 //A stream would be more effective here.
-                return new Manifest(manifestblob.DownloadText());
+                return new Manifest(manifestblob.DownloadText(), this.GetFileSize);
             });
         }
 
         public override FileSystemEntry GetEntry(string path)
         {
             var parts = path.Split(new[] {"\\"}, StringSplitOptions.RemoveEmptyEntries);
-            //throw if parts is empty?
+            if (!parts.Any())
+            {
+                var time = DateTime.Now;
+                return new FileSystemEntry(path, "drops", true, 0,
+                    /*Creation*/time, /*LastWriteTime*/time, /*LastAccessTime*/time,
+                    /*isHidden*/false, /*isReadonly*/true, /*isArchived*/false);
+            }
             var manifest = GetManifest(parts.First());
             if (manifest == null) return null;
             //find in manifest
-            //if parts.lenth == 1 just return parts.first as directory.
+            if (parts.Count() == 1)
+            {
+                var time = DateTime.Now;
+                return new FileSystemEntry(path, parts.First(), true, 0,
+                    /*Creation*/time, /*LastWriteTime*/time, /*LastAccessTime*/time,
+                    /*isHidden*/false, /*isReadonly*/true, /*isArchived*/false);
+            }
+            
             return manifest.GetEntry(parts.Skip(1), path);
            
+        }
+
+        private ConcurrentDictionary<string, ulong> sizes = new ConcurrentDictionary<string, ulong>(StringComparer.OrdinalIgnoreCase);
+
+       
+
+        public ulong GetFileSize(string hash)
+        {
+            return sizes.GetOrAdd(hash, lookuphash =>
+            {
+                var cacheblob = _cache.GetBlockBlobReference(lookuphash);
+                cacheblob.FetchAttributes();
+                return (ulong)cacheblob.Properties.Length;
+            });
         }
 
         public override FileSystemEntry CreateFile(string path)

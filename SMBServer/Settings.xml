@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Settings>
   <Shares>
-    <Share Name="drops" Path="D:\scratch\drops" />
+    <DirectoryShare Name="localdrops" Path="D:\scratch\drops" />
+    <DropShare Name="drops" Account="account" Key="secret" />
   </Shares>
 </Settings>
