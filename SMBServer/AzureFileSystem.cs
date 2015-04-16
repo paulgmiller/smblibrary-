@@ -6,6 +6,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Text;
 using System.Linq;
@@ -17,21 +18,124 @@ using Newtonsoft.Json;
 
 namespace SMBServer
 {
-    public class Manifest
+    public class Manifest 
     {
+       //worst filesystem ever
+      
+
+        public Manifest(string json) {
+            var _hashDict = JsonConvert.DeserializeObject<Dictionary<string,List<string>>>(json);   
+            foreach (var kvp in _hashDict)
+            {
+                foreach (var link in kvp.Value)
+                {
+                    Add(link.Split('\\'), kvp.Key);
+                }
+            }
+        }
+
+        private Manifest() {}
+        Dictionary<string, Manifest> folders = new Dictionary<string,Manifest>();
+        Dictionary<string, string> files  = new Dictionary<string,string>();
+        private void Add(IEnumerable<string> path, string hash)
+        {
+            if (!path.Any()) throw new ArgumentException("no path");
+            var name = path.First();
+            if (path.Count() == 1) 
+            {
+                if (!files.ContainsKey(name))
+                {
+                    files.Add(name, hash);
+                }
+                return;
+            } 
+            if (folders.ContainsKey(name))
+            {
+                folders.Add(name, new Manifest());
+            }  
+            folders[name].Add(path.Skip(1), hash);               
+        }
+        
+
         public DateTime time { get { return DateTime.Now; } }
-        public ManifestFile Find(string path) { return null; }
-        public IEnumerable<ManifestFile> Where(string path) { return null; }
+        public FileSystemEntry GetEntry(IEnumerable<string> path, string fullpath )  
+        {
+          if (!path.Any()) throw new ArgumentException("no path");
+          string name = path.First();
+          if (path.Count() == 1)
+          {
+              if (files.ContainsKey(name))
+              {
+                  return CreateEntry(fullpath, name, /*isDirectory*/false);
+              }
+              if (folders.ContainsKey(name))
+              {
+                  return CreateEntry(fullpath, name, /*isDirectory*/true);
+              }
+              return null;
+          }
+          Manifest m;
+
+          if (folders.TryGetValue(name, out m))
+          {
+              return m.GetEntry(path.Skip(1), fullpath);
+          }
+          return null;
+                
+        }
+
+        public List<FileSystemEntry> ListEntriesInDirectory(IEnumerable<string> path, string fullpath)
+        {
+          if (!path.Any()) 
+          {
+             var folderentries = folders.Keys.Select(folder =>
+                   CreateEntry(Path.Combine(fullpath,folder),folder, true));
+             var fileentries = files.Keys.Select(file => 
+                    CreateEntry(Path.Combine(fullpath,file), file, false));
+             return folderentries.Concat(fileentries).ToList();
+          }
+          string name = path.First();
+          Manifest m;
+          if (folders.TryGetValue(name, out m))
+          {
+              return m.ListEntriesInDirectory(path.Skip(1), fullpath);
+          }
+          return null; //empty?
+        }
+
+        private FileSystemEntry CreateEntry(string path, string name, bool isDirectory)
+        {
+            return new FileSystemEntry(path, name, isDirectory, 0,
+                /*Creation*/time, /*LastWriteTime*/time, /*LastAccessTime*/time,
+                /*isHidden*/false, /*isReadonly*/true, /*isArchived*/false);
+        }
+
+        public string GetHash(IEnumerable<string> path)
+        {
+          if (!path.Any()) throw new ArgumentException("have to have some path to file");
+
+          string name = path.First();
+          
+          if (path.Count() == 1)
+          {
+             string hash;
+             if (files.TryGetValue(name, out hash))
+                 return hash;
+              return null;
+          }
+          Manifest m;
+          if (folders.TryGetValue(name, out m))
+          {
+              return m.GetHash(path.Skip(1));
+          }
+          return null; //empty?
+        }
+
     }
 
-    public class ManifestFile
-    {
-        public ulong Length { get { return 0; } }
-        public string Name { get { return "foobar"; } }
-        public bool isDirectory { get { return false;  } }
+  
 
-        public string Hash { get { return "DEADBEEF"; }  }
-    }
+    
 
     public class AzureFileSystem : FileSystem
     {
@@ -43,39 +147,33 @@ namespace SMBServer
             string cnxString = string.Format("DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1}", account, key);
             var storageaccount = CloudStorageAccount.Parse(cnxString);
             var blobClient  = storageaccount.CreateCloudBlobClient();
-            var _cache = blobClient.GetContainerReference("cache");
-            var _drops = blobClient.GetContainerReference("drops");
+            _cache = blobClient.GetContainerReference("cache");
+            _drops = blobClient.GetContainerReference("drops");
         }
 
-        public async Task<Manifest> GetManifest(string id)
+        private ConcurrentDictionary<string, Manifest> manifests = new ConcurrentDictionary<string, Manifest>();
+
+        public Manifest GetManifest(string id)
         {
-            string localpath = @"D:\scratch\dropscache\" + id;
-            if (!File.Exists(localpath))
+            id = id.ToLower();
+            return manifests.GetOrAdd(id, newid =>
             {
-                var manifestblob = _cache.GetBlockBlobReference(id + "/files.json");
-                await manifestblob.DownloadToFileAsync(localpath, FileMode.CreateNew);
-            }
-
-
-            return new Manifest();
+                var manifestblob = _cache.GetBlockBlobReference(newid + "/files.json");
+                //var stream = new MemoryStream();
+                //A stream would be more effective here.
+                return new Manifest(manifestblob.DownloadText());
+            });
         }
 
         public override FileSystemEntry GetEntry(string path)
         {
-            var uniqueid = path.Split('\\')[0];
-            var manifest = GetManifest(uniqueid).Result;
-
+            var parts = path.Split(new[] {"\\"}, StringSplitOptions.RemoveEmptyEntries);
+            //throw if parts is empty?
+            var manifest = GetManifest(parts.First());
+            if (manifest == null) return null;
             //find in manifest
-            var entry = manifest.Find(path);
-        	if (entry == null) return null;
-        	// or throw new UnauthorizedAccessException("Given path is not allowed");
-
-            return new FileSystemEntry(path, entry.Name, entry.isDirectory, 
-            			entry.Length, 
-            			/*Creation*/manifest.time, 
-            			/*LastWriteTime*/manifest.time,
-            			/*LastAccessTime*/manifest.time, 
-            			/*isHidden*/false, /*isReadonly*/true, /*isArchived*/false);
+            //if parts.lenth == 1 just return parts.first as directory.
+            return manifest.GetEntry(parts.Skip(1), path);
            
         }
 
@@ -101,28 +199,26 @@ namespace SMBServer
 
         public override List<FileSystemEntry> ListEntriesInDirectory(string path)
         {
-            var uniqueid = path.Split('\\')[0];
-            var manifest = GetManifest(uniqueid).Result;
-            var entries = manifest.Where(path);
-        	
-            return entries.Select(entry =>
-            	new FileSystemEntry(path, entry.Name, entry.isDirectory, 
-            			entry.Length, 
-            			/*Creation*/manifest.time, 
-            			/*LastWriteTime*/manifest.time,
-            			/*LastAccessTime*/manifest.time, 
-            			/*isHidden*/false, /*isReadonly*/true, /*isArchived*/false)).ToList();
+            //throw if parts is empty?
+            var parts = path.Split(new[] { "\\" }, StringSplitOptions.RemoveEmptyEntries);
+            var manifest = GetManifest(parts.First());
+            if (manifest == null) return new FileSystemEntry[] { }.ToList(); //null?
+            //find in manifest
+            return manifest.ListEntriesInDirectory(parts.Skip(1), path);
         }
 
         public override Stream OpenFile(string path, FileMode mode, FileAccess access, FileShare share)
         {
-            var uniqueid = path.Split('\\')[0];
-            var manifest = GetManifest(uniqueid).Result;
-
+            //throw on mode other than read. Ignore everything else?
+            //throw if parts is empty?
+            var parts = path.Split(new[] { "\\" }, StringSplitOptions.RemoveEmptyEntries);
+            var manifest = GetManifest(parts.First());
+            if (manifest == null) return null;
             //find in manifest
-            var entry = manifest.Find(path);
-        	if (entry == null) return null;
-            var cacheblob = _cache.GetBlockBlobReference(entry.Hash);
+            var hash = manifest.GetHash(parts.Skip(1));
+
+        	if (hash == null) return null;
+            var cacheblob = _cache.GetBlockBlobReference(hash);
             return cacheblob.OpenRead(); //async? 
         }
 
