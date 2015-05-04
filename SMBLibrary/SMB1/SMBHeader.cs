@@ -39,16 +39,18 @@ namespace SMBLibrary.SMB1
         public SMBHeader(byte[] buffer)
         {
             Protocol = ByteReader.ReadBytes(buffer, 0, 4);
-            Command = (CommandName)ByteReader.ReadByte(buffer, 4);
-            Status = (NTStatus)LittleEndianConverter.ToUInt32(buffer, 5);
-            Flags = (HeaderFlags)ByteReader.ReadByte(buffer, 9);
-            Flags2 = (HeaderFlags2)LittleEndianConverter.ToUInt16(buffer, 10);
-            ushort PIDHigh = LittleEndianConverter.ToUInt16(buffer, 12);
-            SecurityFeatures = LittleEndianConverter.ToUInt64(buffer, 14);
-            TID = LittleEndianConverter.ToUInt16(buffer, 24);
-            ushort PIDLow = LittleEndianConverter.ToUInt16(buffer, 26);
-            UID = LittleEndianConverter.ToUInt16(buffer, 28);
-            MID = LittleEndianConverter.ToUInt16(buffer, 30);
+            //stucture size and credit charge 2 bytes each
+            //ChannelSequence/Reserved is 4 bytes
+            Command = (CommandName)ByteReader.ReadByte(buffer, 12);
+            Status = (NTStatus)LittleEndianConverter.ToUInt32(buffer, 13);
+            Flags = (HeaderFlags)ByteReader.ReadByte(buffer, 17);
+            Flags2 = (HeaderFlags2)LittleEndianConverter.ToUInt16(buffer, 18);
+            ushort PIDHigh = LittleEndianConverter.ToUInt16(buffer, 20);
+            SecurityFeatures = LittleEndianConverter.ToUInt64(buffer, 22);
+            TID = LittleEndianConverter.ToUInt16(buffer, 32);
+            ushort PIDLow = LittleEndianConverter.ToUInt16(buffer, 34);
+            UID = LittleEndianConverter.ToUInt16(buffer, 36);
+            MID = LittleEndianConverter.ToUInt16(buffer, 38);
 
             PID = (uint)((PIDHigh << 16) | PIDLow);
         }

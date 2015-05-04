@@ -95,27 +95,27 @@ namespace SMBLibrary.SMB1
             return buffer;
         }
 
-        public static bool IsValidSMBMessage(byte[] buffer)
+        public static void IsValidSMBMessage(byte[] buffer)
         {
-            if (buffer[0] == SMBHeader.ProtocolSignature[0] &&
+            if ((buffer[0] == SMBHeader.ProtocolSignature[0] ||  buffer[0]  == 0xFE) &&
                 buffer[1] == SMBHeader.ProtocolSignature[1] &&
                 buffer[2] == SMBHeader.ProtocolSignature[2] &&
                 buffer[3] == SMBHeader.ProtocolSignature[3])
+            //FE-53-4D-42
             {
-                return true;
+                return;
             }
             else
             {
-                return false;
+                var header = new byte[4];
+                Array.Copy(buffer, header, 4);
+                throw new InvalidRequestException("Invalid SMB message signature" + BitConverter.ToString(header)); 
             }
         }
 
         public static SMBMessage GetSMBMessage(byte[] buffer)
         {
-            if (!IsValidSMBMessage(buffer))
-            {
-                throw new InvalidRequestException("Invalid SMB message signature");;
-            }
+            IsValidSMBMessage(buffer);           
             return new SMBMessage(buffer);
         }
     }
